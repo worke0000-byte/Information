@@ -3,73 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>业务动态共享中心</title>
+    <title>业务动态管理中心</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <style>
-        [v-cloak] { display: none; }
-        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
-    </style>
+    <style>[v-cloak] { display: none; }</style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen">
     <div id="app" v-cloak class="max-w-6xl mx-auto p-4 md:p-8">
-        <header class="mb-10 text-center">
-            <h1 class="text-3xl font-black text-slate-900 tracking-tight">INSIGHT HUB<span class="text-indigo-600">.</span></h1>
-            <p class="text-slate-500 mt-2 font-medium">区域与话题互动分享平台</p>
-        </header>
+        <nav class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-black text-slate-800">INSIGHT HUB<span class="text-indigo-600">.</span></h1>
+            <button @click="showAdmin = !showAdmin" class="text-xs font-bold text-slate-400 hover:text-indigo-600 transition">
+                {{ showAdmin ? '退出管理模式' : '进入管理模式' }}
+            </button>
+        </nav>
 
-        <div class="bg-white p-6 rounded-3xl card-shadow mb-8 border border-white flex flex-wrap gap-8 items-start">
-            <div class="flex-1 min-w-[250px]">
-                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 block">Geographic Region / 区域</label>
-                <div class="flex flex-wrap gap-2">
-                    <button v-for="r in ['全部', '美国', '亚太']" @click="filter.region = r" 
-                        :class="['px-5 py-2 rounded-xl text-sm font-semibold transition-all', filter.region === r ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200']">
-                        {{ r }}
-                    </button>
-                </div>
-            </div>
-            <div class="flex-1 min-w-[250px]">
-                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 block">Topic Category / 话题</label>
-                <div class="flex flex-wrap gap-2">
-                    <button v-for="t in ['全部', '新闻', '社区活动', '竞品动态']" @click="filter.topic = t" 
-                        :class="['px-5 py-2 rounded-xl text-sm font-semibold transition-all', filter.topic === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-500 hover:bg-slate-200']">
-                        {{ t }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="error" class="bg-red-50 text-red-600 p-6 rounded-2xl border border-red-100 mb-8">
-            <p class="font-bold mb-1">⚠️ JSON 数据读取异常</p>
-            <p class="text-sm opacity-80">{{ error }}。请检查 data.json 是否少了逗号或引号。</p>
-        </div>
-
-        <div v-if="loading" class="flex flex-col items-center py-20">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
-            <p class="text-slate-400 font-medium">正在获取最新动态...</p>
-        </div>
-
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="item in filteredItems" :key="item.id" class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow hover:-translate-y-1 transition-all duration-300 group">
-                <div class="flex gap-2 mb-4">
-                    <span class="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-900 text-white">{{ item.region }}</span>
-                    <span class="text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600">{{ item.topic }}</span>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-3 group-hover:text-indigo-600 transition-colors">{{ item.title }}</h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">{{ item.content }}</p>
-                <div class="pt-5 border-t border-slate-50 mt-auto">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-[10px] font-black text-amber-600 uppercase tracking-tighter">Value / 业务价值</span>
+        <div v-if="showAdmin" class="bg-indigo-900 text-white p-6 rounded-3xl mb-8 shadow-xl">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">🚀 新闻录入助手 <span class="text-[10px] bg-indigo-500 px-2 py-0.5 rounded">仅供内部更新使用</span></h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <select v-model="newItem.region" class="bg-indigo-800 border-none rounded-xl p-2 text-sm text-white">
+                            <option>美国</option><option>亚太</option>
+                        </select>
+                        <select v-model="newItem.topic" class="bg-indigo-800 border-none rounded-xl p-2 text-sm text-white">
+                            <option>新闻</option><option>社区活动</option><option>竞品动态</option>
+                        </select>
                     </div>
-                    <p class="text-xs font-semibold text-amber-900 leading-snug bg-amber-50/50 p-3 rounded-2xl border border-amber-100/30">
-                        💡 {{ item.value }}
-                    </p>
+                    <input v-model="newItem.title" placeholder="输入标题" class="w-full bg-indigo-800 border-none rounded-xl p-2 text-sm placeholder-indigo-400">
+                    <textarea v-model="newItem.content" placeholder="输入内容" rows="2" class="w-full bg-indigo-800 border-none rounded-xl p-2 text-sm placeholder-indigo-400"></textarea>
+                    <textarea v-model="newItem.value" placeholder="输入业务价值" rows="2" class="w-full bg-indigo-800 border-none rounded-xl p-2 text-sm placeholder-indigo-400"></textarea>
+                    <button @click="generateNewJson" class="w-full bg-white text-indigo-900 py-3 rounded-xl font-bold hover:bg-indigo-50 transition">
+                        点击生成并复制最新数据
+                    </button>
+                </div>
+                <div class="relative">
+                    <label class="text-[10px] font-bold text-indigo-300 block mb-2 uppercase">预览：准备更新至 GitHub 的数据</label>
+                    <pre class="bg-black/30 p-4 rounded-2xl text-[10px] h-[200px] overflow-auto text-emerald-400 leading-tight">[[ {{ newItem }} , ...旧数据]]</pre>
                 </div>
             </div>
         </div>
 
-        <div v-if="!loading && filteredItems.length === 0" class="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-            <p class="text-slate-400">该筛选条件下暂无内容</p>
+        <div class="flex flex-wrap gap-4 mb-8">
+            <button v-for="r in ['全部', '美国', '亚太']" @click="filter.region = r" 
+                :class="['px-4 py-2 rounded-xl text-sm transition', filter.region === r ? 'bg-slate-800 text-white' : 'bg-white shadow-sm text-slate-500']">{{r}}</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div v-for="item in filteredItems" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex gap-2 mb-2">
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-500">{{item.region}}</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">{{item.topic}}</span>
+                </div>
+                <h3 class="font-bold mb-2">{{item.title}}</h3>
+                <p class="text-xs text-slate-500 leading-relaxed mb-4">{{item.content}}</p>
+                <div class="bg-amber-50 p-3 rounded-xl">
+                    <p class="text-[10px] font-bold text-amber-700">💡 业务价值</p>
+                    <p class="text-[11px] text-amber-900 mt-1">{{item.value}}</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -78,33 +69,45 @@
         createApp({
             setup() {
                 const items = ref([]);
-                const loading = ref(true);
-                const error = ref(null);
+                const showAdmin = ref(false);
                 const filter = ref({ region: '全部', topic: '全部' });
+                const newItem = ref({ region: '美国', topic: '新闻', title: '', content: '', value: '' });
 
                 onMounted(async () => {
-                    try {
-                        // 增加时间戳防止浏览器缓存旧数据
-                        const res = await fetch(`data.json?t=${Date.now()}`);
-                        if (!res.ok) throw new Error('无法连接到数据库文件');
-                        items.value = await res.json();
-                    } catch (e) {
-                        error.value = e.message;
-                        console.error("数据加载失败:", e);
-                    } finally {
-                        loading.value = false;
-                    }
+                    const res = await fetch(`data.json?t=${Date.now()}`);
+                    items.value = await res.json();
                 });
 
                 const filteredItems = computed(() => {
                     return items.value.filter(item => {
-                        const rMatch = filter.value.region === '全部' || item.region === filter.value.region;
-                        const tMatch = filter.value.topic === '全部' || item.topic === filter.value.topic;
-                        return rMatch && tMatch;
+                        const r = filter.value.region === '全部' || item.region === filter.value.region;
+                        const t = filter.value.topic === '全部' || item.topic === filter.value.topic;
+                        return r && t;
                     });
                 });
 
-                return { items, filter, filteredItems, loading, error };
+                // 核心功能：生成新 JSON 并复制到剪贴板
+                const generateNewJson = () => {
+                    if (!newItem.value.title) return alert('标题不能为空');
+                    
+                    // 把新内容放在最前面
+                    const updatedData = [
+                        { id: Date.now(), ...newItem.value },
+                        ...items.value
+                    ];
+                    
+                    const jsonString = JSON.stringify(updatedData, null, 2);
+                    
+                    // 复制到剪贴板
+                    navigator.clipboard.writeText(jsonString).then(() => {
+                        alert('✨ 最新 JSON 数据已复制到剪贴板！\n请去 GitHub 的 data.json 全选并粘贴覆盖。');
+                        // 实时更新页面预览
+                        items.value = updatedData;
+                        newItem.value = { region: '美国', topic: '新闻', title: '', content: '', value: '' };
+                    });
+                };
+
+                return { items, filter, filteredItems, showAdmin, newItem, generateNewJson };
             }
         }).mount('#app');
     </script>
