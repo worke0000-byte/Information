@@ -417,16 +417,28 @@
                     filters.value.brand = '全部品牌';
                 };
 
+                // 核心：彻底修复旧浏览器不更新 JSON 缓存的问题
                 onMounted(async () => {
-                    const localData = localStorage.getItem('edu_insight_data');
-                    if (localData) {
-                        items.value = JSON.parse(localData);
-                    } else {
-                        try {
-                            const res = await fetch(`data.json?v=${Date.now()}`);
-                            items.value = await res.json();
-                            localStorage.setItem('edu_insight_data', JSON.stringify(items.value));
-                        } catch(e) { items.value = []; }
+                    try {
+                        // 1. 强制去云端拉取最新数据，避开死缓存
+                        const res = await fetch(`data.json?v=${Date.now()}`);
+                        const remoteData = await res.json();
+                        
+                        // 2. 读取本地缓存
+                        const localDataStr = localStorage.getItem('edu_insight_data');
+                        const localData = localDataStr ? JSON.parse(localDataStr) : [];
+
+                        // 3. 智能对比：本地条数如果更多，说明有未保存草稿，保留本地。否则以云端为准！
+                        if (localData.length > remoteData.length) {
+                            items.value = localData;
+                        } else {
+                            items.value = remoteData;
+                            localStorage.setItem('edu_insight_data', JSON.stringify(remoteData));
+                        }
+                    } catch(e) { 
+                        // 断网或拉取失败时使用本地兜底
+                        const localDataStr = localStorage.getItem('edu_insight_data');
+                        items.value = localDataStr ? JSON.parse(localDataStr) : []; 
                     }
                 });
 
