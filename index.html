@@ -156,7 +156,10 @@
                         <div class="mt-6 flex flex-col gap-4 border-t border-slate-100 pt-6">
                             <div v-if="item.value" class="bg-amber-50/80 px-6 py-4 rounded-2xl w-full">
                                 <p class="text-16px font-bold text-amber-800 line-clamp-2 italic break-words leading-relaxed">
-                                    <span class="font-black not-italic text-amber-900 mr-1">💡 业务价值：</span>{{ item.value }}
+                                    <span class="font-black not-italic text-amber-900 mr-1">
+                                        💡 {{ item.tab === 'ai' || item.tab === 'hardware' ? '功能介绍' : '业务价值' }}：
+                                    </span>
+                                    {{ item.value }}
                                 </p>
                             </div>
                             <div class="flex justify-end">
@@ -190,12 +193,19 @@
                         </div>
                         
                         <div class="space-y-12 pb-10">
-                            <p class="text-xl md:text-2xl text-slate-600 leading-relaxed font-light whitespace-pre-wrap break-words">{{ detailItem.content || detailItem.intro }}</p>
+                            <div>
+                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                                    {{ detailItem.tab === 'ai' || detailItem.tab === 'hardware' ? '公司介绍' : '内容分析' }}
+                                </p>
+                                <p class="text-xl md:text-2xl text-slate-600 leading-relaxed font-light whitespace-pre-wrap break-words">{{ detailItem.content || detailItem.intro }}</p>
+                            </div>
                             
                             <div v-if="detailItem.value" class="bg-[#fef9c3]/40 p-10 md:p-12 rounded-[40px] border border-amber-200/50 relative mt-16 w-full">
                                 <span class="absolute -top-8 left-8 text-7xl text-amber-300/60 font-serif">“</span>
                                 <p class="text-24px text-amber-900 font-bold leading-relaxed italic whitespace-pre-wrap relative z-10 break-words w-full"> 
-                                    <span class="font-black not-italic text-amber-700 block mb-3 text-xl">💡 业务价值：</span>
+                                    <span class="font-black not-italic text-amber-700 block mb-3 text-xl">
+                                        💡 {{ detailItem.tab === 'ai' || detailItem.tab === 'hardware' ? '功能介绍' : '业务价值' }}：
+                                    </span>
                                     {{ detailItem.value }} 
                                 </p>
                             </div>
@@ -266,13 +276,28 @@
                             </transition>
 
                             <div v-if="form.tab === 'event'" class="space-y-2">
-                                <label class="text-[10px] font-bold text-indigo-500 uppercase ml-1 underline">动向发生日期 (重要：决定排序)</label>
+                                <label class="text-[10px] font-bold text-indigo-500 uppercase ml-1 underline">活动日期预告 (重要：决定预告排序)</label>
                                 <input v-model="form.eventDate" type="date" class="w-full bg-indigo-50 p-4 rounded-2xl border-none font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500">
                             </div>
 
-                            <input v-model="form.title" placeholder="输入动态标题..." class="w-full bg-slate-50 p-5 rounded-2xl border-none font-black text-2xl focus:ring-2 focus:ring-indigo-500">
-                            <textarea v-model="form.content" placeholder="在此输入深度内容分析..." rows="6" class="w-full bg-slate-50 p-5 rounded-2xl border-none text-lg focus:ring-2 focus:ring-indigo-500"></textarea>
-                            <textarea v-model="form.value" placeholder="💡 业务价值与战略洞察 (选填)" rows="3" class="w-full bg-amber-50/50 p-5 rounded-2xl border-none text-lg text-amber-900 font-medium italic focus:ring-2 focus:ring-amber-500"></textarea>
+                            <div class="space-y-2 pt-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">动态标题</label>
+                                <input v-model="form.title" placeholder="输入动态标题..." class="w-full bg-slate-50 p-5 rounded-2xl border-none font-black text-2xl focus:ring-2 focus:ring-indigo-500">
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    {{ form.tab === 'ai' || form.tab === 'hardware' ? '公司介绍' : '内容分析' }}
+                                </label>
+                                <textarea v-model="form.content" :placeholder="form.tab === 'ai' || form.tab === 'hardware' ? '输入公司背景与简介...' : '在此输入深度内容分析...'" rows="6" class="w-full bg-slate-50 p-5 rounded-2xl border-none text-lg focus:ring-2 focus:ring-indigo-500"></textarea>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">
+                                    💡 {{ form.tab === 'ai' || form.tab === 'hardware' ? '功能介绍' : '业务价值' }} (选填)
+                                </label>
+                                <textarea v-model="form.value" :placeholder="form.tab === 'ai' || form.tab === 'hardware' ? '详细列出核心功能...' : '提取战略洞察与业务价值...'" rows="3" class="w-full bg-amber-50/50 p-5 rounded-2xl border-none text-lg text-amber-900 font-medium italic focus:ring-2 focus:ring-amber-500"></textarea>
+                            </div>
                             
                             <div class="flex gap-4 pt-6 pb-10">
                                 <button @click="saveContent" class="flex-1 bg-indigo-600 text-white py-5 rounded-2xl font-black shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 transition-all text-lg">保存并准备导出</button>
@@ -303,7 +328,7 @@
         const { createApp, ref, computed, onMounted, watch } = Vue;
         createApp({
             setup() {
-                const currentTab = ref('all'); // 默认初始设定为全量概览
+                const currentTab = ref('all'); 
                 const currentIssue = ref('全部');
                 const items = ref([]);
                 const detailItem = ref(null);
@@ -316,7 +341,7 @@
 
                 const categories = { 
                     global: { title: '全球教育资讯', icon: '🌐' },
-                    event: { title: '地区动向', icon: '🗓️' }, // 已更名为地区动向
+                    event: { title: '地区动向', icon: '🗓️' },
                     ai: { title: 'AI技术发展', icon: '🧠' }, 
                     hardware: { title: '教育硬件', icon: '📟' }
                 };
@@ -338,7 +363,6 @@
                 const getDynamicRegions = computed(() => getRegionsByTab(currentTab.value));
                 const getDynamicTopics = computed(() => getTopicsByTab(currentTab.value));
                 
-                // 只要选中的是一级分类 global 或 event，就显示过滤器（不限期数）
                 const showFilters = computed(() => ['global', 'event'].includes(currentTab.value));
 
                 const filters = ref({ region: '全部地区', topic: '全部话题', brand: '全部品牌' });
@@ -371,7 +395,6 @@
                     });
                 });
 
-                // 生成智能大标题
                 const headerTitle = computed(() => {
                     let issueText = currentIssue.value === '全部' ? '' : `No.${currentIssue.value} 期 `;
                     let tabText = currentTab.value === 'all' ? '综合总览' : categories[currentTab.value].title;
@@ -379,7 +402,6 @@
                     return issueText + tabText;
                 });
 
-                // 设置板块时不重置期数
                 const setTab = (tab) => {
                     currentTab.value = tab;
                     filters.value.region = '全部地区';
@@ -387,7 +409,6 @@
                     filters.value.brand = '全部品牌';
                 };
 
-                // 设置期数时默认重置为“综合总览”，方便查阅单期全貌
                 const setIssue = (issue) => {
                     currentIssue.value = issue;
                     currentTab.value = 'all';
@@ -416,13 +437,9 @@
                 const filteredList = computed(() => {
                     return items.value
                         .filter(i => {
-                            // 1. 过滤期数
                             if (currentIssue.value !== '全部' && i.issue != currentIssue.value) return false;
-                            
-                            // 2. 过滤分类
                             if (currentTab.value !== 'all' && i.tab !== currentTab.value) return false;
                             
-                            // 3. 过滤二/三级标签 (仅在特定板块下生效)
                             if (showFilters.value) {
                                 const r = filters.value.region === '全部地区' || i.region === filters.value.region;
                                 const t = filters.value.topic === '全部话题' || i.topic === filters.value.topic;
@@ -440,7 +457,7 @@
 
                 const viewDetail = (item) => { detailItem.value = item; };
                 const verify = () => {
-                    if(pass.value === 'cz') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; }
+                    if(pass.value === 'cuixinyun') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; }
                     else alert('验证失败');
                 };
 
@@ -449,7 +466,6 @@
                     const latestIssue = items.value[0]?.issue || 1;
                     const existingRange = items.value.find(i => i.issue == latestIssue)?.issueDateRange || '';
                     
-                    // 默认填表分类修正：如果不处于具体分类，默认选中global
                     const fallbackTab = currentTab.value === 'all' ? 'global' : currentTab.value;
 
                     form.value = { 
