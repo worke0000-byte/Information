@@ -3,16 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全球教育资讯与地区动态-稳定版</title>
+    <title>全球教育资讯与地区动态-修复版</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&display=swap" rel="stylesheet">
     
     <style>
@@ -20,21 +17,14 @@
         body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background-color: #f8fafc; color: #1e293b; }
         .art-title { font-family: 'Noto Serif SC', serif; letter-spacing: -0.01em; }
 
-        /* 核心修复 3：排版紧凑优化，解决图3中间距过大的问题 */
-        .prose-tight { font-size: 1.125rem; line-height: 1.7; color: #334155; }
-        .prose-tight p { margin-top: 0.5em; margin-bottom: 0.75em; }
-        .prose-tight ul, .prose-tight ol { padding-left: 1.5rem; margin-top: 0.5em; margin-bottom: 0.75em; }
-        .prose-tight li { margin-top: 0.25em; margin-bottom: 0.25em; }
-        .prose-tight li p { margin: 0; display: inline; } /* 防止列表内段落换行 */
-        .prose-tight strong { color: #0f172a; font-weight: 800; }
-        .prose-tight a { color: #4f46e5; text-decoration: underline; }
+        .ql-editor, .prose-tight { font-size: 1.125rem !important; line-height: 1.8 !important; color: #334155 !important; }
+        .ql-editor p, .prose-tight p { margin-bottom: 1rem !important; }
+        .ql-editor strong, .prose-tight strong { color: #0f172a; font-weight: 800; }
+        
+        .ql-editor ol, .prose-tight ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin-bottom: 1rem !important; }
+        .ql-editor ul, .prose-tight ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin-bottom: 1rem !important; }
+        .ql-editor li, .prose-tight li { display: list-item !important; margin-bottom: 0.5rem !important; }
 
-        /* 编辑器内排版对齐 */
-        .ql-editor { font-size: 1.125rem; line-height: 1.7; color: #334155; min-height: 300px; padding: 24px !important; }
-        .ql-editor p { margin-bottom: 0.75em; }
-        .ql-editor li { padding-bottom: 0.25em; }
-
-        /* UI 组件样式 */
         .sidebar-item { transition: all 0.2s; border: 1px solid transparent; }
         .sidebar-active { background: white; color: #4f46e5; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #f1f5f9; }
         
@@ -42,10 +32,10 @@
         .card-art:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); }
         .hide-scroll::-webkit-scrollbar { width: 0px; background: transparent; }
 
-        /* 编辑器美化 */
         .editor-container { border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; background: white; }
         .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid #f1f5f9 !important; background: #f8fafc; padding: 12px !important; }
         .ql-container.ql-snow { border: none !important; }
+        .ql-editor { min-height: 300px; padding: 24px !important; }
         
         .animate-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -93,6 +83,7 @@
                 <div v-else class="space-y-3">
                     <button @click="openAddForm" class="w-full bg-indigo-600 text-white py-4 rounded-2xl text-xs font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-all">＋ 发布最新动态</button>
                     <button @click="copyFullJson" class="w-full bg-slate-800 text-slate-400 py-4 rounded-2xl text-[10px] font-bold uppercase hover:text-white transition">导出并覆盖 JSON</button>
+                    <button @click="clearLocalCache" class="w-full text-[10px] text-red-500/50 hover:text-red-500 pt-2 transition">强刷本地缓存</button>
                 </div>
             </div>
         </aside>
@@ -115,23 +106,20 @@
                         <div class="flex flex-col gap-1.5">
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Region / 地区</label>
                             <select v-model="filters.region" class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-16px font-bold outline-none h-11 min-w-[120px]">
-                                <option value="全部地区">全部地区</option>
-                                <option v-for="r in getDynamicRegions" :key="r" :value="r">{{r}}</option>
+                                <option v-for="r in dynamicRegions" :key="r" :value="r">{{r}}</option>
                             </select>
                         </div>
                         <div class="flex flex-col gap-1.5">
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Topic / 话题</label>
                             <select v-model="filters.topic" class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-16px font-bold outline-none h-11 min-w-[120px]">
-                                <option value="全部话题">全部话题</option>
-                                <option v-for="t in getDynamicTopics" :key="t" :value="t">{{t}}</option>
+                                <option v-for="t in dynamicTopics" :key="t" :value="t">{{t}}</option>
                             </select>
                         </div>
                         <transition name="fade-slide">
                             <div v-if="filters.topic === '竞品动态'" class="flex flex-col gap-1.5 border-l pl-4 border-slate-200">
                                 <label class="text-[10px] font-black text-indigo-500 uppercase tracking-widest pl-1">Brand / 品牌</label>
                                 <select v-model="filters.brand" class="bg-indigo-600 text-white border-none rounded-xl px-4 py-2 text-16px font-bold outline-none h-11 min-w-[140px] shadow-sm">
-                                    <option value="全部品牌">全部品牌</option>
-                                    <option v-for="b in brands" :key="b" :value="b">{{b}}</option>
+                                    <option v-for="b in dynamicBrands" :key="b" :value="b">{{b}}</option>
                                 </select>
                             </div>
                         </transition>
@@ -155,11 +143,10 @@
                                 <span class="text-xs font-bold text-slate-300 italic">{{ item.date }}</span>
                             </div>
                             <h3 class="art-title text-3xl text-slate-800 font-black mb-6 leading-tight group-hover:text-indigo-600 transition-colors">{{ item.title }}</h3>
-                            
                             <div class="text-slate-500 text-base leading-relaxed line-clamp-3 mb-8 prose-tight" v-html="stripAllFormatting(item.content || item.intro)"></div>
                         </div>
 
-                        <div v-if="item.value" class="mt-4 pt-8 border-t border-slate-50">
+                        <div v-if="isValidContent(item.value)" class="mt-4 pt-8 border-t border-slate-50">
                             <div class="bg-amber-50/70 p-6 rounded-3xl border border-amber-100/50">
                                 <p class="text-amber-900 text-sm font-bold leading-relaxed italic">
                                     <span class="not-italic mr-2">💡</span>{{ stripAllFormatting(item.value) }}
@@ -181,7 +168,7 @@
                         <header class="mb-12 border-b border-slate-100 pb-12">
                             <div class="flex gap-3 mb-6">
                                 <span class="bg-indigo-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200">ISSUE {{ detailItem.issue }}</span>
-                                <span class="bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">{{ detailItem.region }}</span>
+                                <span v-if="detailItem.region" class="bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">{{ detailItem.region }}</span>
                             </div>
                             <h2 class="art-title text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] mb-4">{{ detailItem.title }}</h2>
                             <p class="text-slate-400 font-bold italic">{{ detailItem.date }} 发布</p>
@@ -194,10 +181,10 @@
                             <div class="prose-tight break-words" v-html="smartRender(detailItem.content || detailItem.intro)"></div>
                         </div>
 
-                        <div v-if="detailItem.value" class="bg-amber-50 rounded-[40px] p-10 md:p-14 border border-amber-100/50 relative">
+                        <div v-if="isValidContent(detailItem.value)" class="bg-amber-50 rounded-[40px] p-10 md:p-14 border border-amber-100/50 relative">
                             <span class="absolute -top-6 left-10 text-6xl text-amber-200 font-serif opacity-50">“</span>
                             <h4 class="text-amber-900 font-black text-xl mb-6 flex items-center gap-2">
-                                <span>💡</span> 业务价值分析
+                                <span>💡</span> {{ detailItem.tab === 'ai' || detailItem.tab === 'hardware' ? '功能介绍' : '业务价值分析' }}
                             </h4>
                             <div class="prose-tight text-amber-800 italic" v-html="smartRender(detailItem.value)"></div>
                         </div>
@@ -224,13 +211,26 @@
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">期数 No.</label>
                             <input v-model="form.issue" type="number" class="w-full bg-white p-5 rounded-2xl border-none shadow-sm font-black focus:ring-2 focus:ring-indigo-500">
                         </div>
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="text-[10px] font-black text-indigo-500 uppercase tracking-widest ml-2">本期侧边栏展示时间 (自动同步当前期数)</label>
+                            <input v-model="form.issueDateRange" placeholder="如: 2026.04.16 - 04.26" class="w-full bg-white p-5 rounded-2xl border-none shadow-sm font-black text-indigo-600 focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">日期 Date</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">发布/事件 日期</label>
                             <input v-model="form.date" type="date" class="w-full bg-white p-5 rounded-2xl border-none shadow-sm font-black focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">地区 Region</label>
-                            <input v-model="form.region" placeholder="如：美国、香港" class="w-full bg-white p-5 rounded-2xl border-none shadow-sm font-black focus:ring-2 focus:ring-indigo-500">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">地区 (输入或选择)</label>
+                            <input v-model="form.region" list="dl-region" placeholder="填入地区" class="w-full bg-white p-5 rounded-2xl border-none shadow-sm font-black focus:ring-2 focus:ring-indigo-500">
+                            <datalist id="dl-region"><option v-for="r in dynamicRegions.slice(1)" :value="r"></option></datalist>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">分类 (输入或选择)</label>
+                            <input v-model="form.topic" list="dl-topic" placeholder="填入话题" class="w-full bg-white p-5 rounded-2xl border-none shadow-sm font-black focus:ring-2 focus:ring-indigo-500">
+                            <datalist id="dl-topic"><option v-for="t in dynamicTopics.slice(1)" :value="t"></option></datalist>
                         </div>
                     </div>
 
@@ -238,16 +238,26 @@
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">动态标题</label>
                         <input v-model="form.title" placeholder="输入文章标题..." class="w-full bg-white p-6 rounded-3xl border-none shadow-sm font-black text-2xl focus:ring-2 focus:ring-indigo-500">
                     </div>
+                    
+                    <transition name="fade-slide">
+                        <div v-if="form.topic === '竞品动态'" class="space-y-2 p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100">
+                            <label class="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-2">关联品牌 Brand (输入或选择)</label>
+                            <input v-model="form.brand" list="dl-brand" placeholder="填入品牌名称" class="w-full p-5 bg-white rounded-2xl border-none font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500">
+                            <datalist id="dl-brand"><option v-for="b in dynamicBrands.slice(1)" :value="b"></option></datalist>
+                        </div>
+                    </transition>
 
                     <div class="space-y-3">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 flex justify-between">
-                            <span>{{ form.tab === 'ai' || form.tab === 'hardware' ? '公司介绍' : '正文深度分析' }} (支持直接粘贴Word图文)</span>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                            {{ form.tab === 'ai' || form.tab === 'hardware' ? '公司介绍' : '正文深度分析' }}
                         </label>
                         <div class="editor-container"><div id="editor-content"></div></div>
                     </div>
 
                     <div class="space-y-3">
-                        <label class="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-2">💡 核心价值提炼</label>
+                        <label class="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-2">
+                            💡 {{ form.tab === 'ai' || form.tab === 'hardware' ? '功能介绍' : '业务价值提炼' }}
+                        </label>
                         <div class="editor-container border-amber-100"><div id="editor-value"></div></div>
                     </div>
                 </div>
@@ -283,8 +293,6 @@
                 const isEditing = ref(false);
                 const pass = ref('');
                 const form = ref({});
-                
-                // 全局保存 Quill 实例，防止双重加载
                 let quillContent = null;
                 let quillValue = null;
 
@@ -294,22 +302,26 @@
                     ai: { title: 'AI技术发展', icon: '🧠' },
                     hardware: { title: '教育硬件', icon: '📟' }
                 };
-                const brands = ['RSM', 'AoPS', 'Kumon', 'Mathnasium', '数研', 'Math Concept', 'The Learning Lab', '其他'];
 
-                const getRegionsByTab = (tab) => {
-                    if (tab === 'global') return ['全部地区', '美国', '香港', '新加坡', '马来西亚', '澳大利亚'];
-                    if (tab === 'event') return ['全部地区', '硅谷', '尔湾', '西雅图', '香港', '新加坡', '马来西亚', '澳大利亚'];
-                    return [];
-                };
+                // --- 核心修复：找回默认的预设选项典藏 ---
+                const baseRegions = ['美国', '香港', '新加坡', '马来西亚', '澳大利亚', '硅谷', '尔湾', '西雅图'];
+                const baseTopics = ['宏观政策', '竞品动态', '教育动向', '教育活动', '社区活动'];
+                const baseBrands = ['RSM', 'AoPS', 'Kumon', 'Mathnasium', '数研', 'Math Concept', 'The Learning Lab'];
 
-                const getTopicsByTab = (tab) => {
-                    if (tab === 'global') return ['全部话题', '宏观政策', '竞品动态'];
-                    if (tab === 'event') return ['全部话题', '教育动向', '教育活动', '社区活动'];
-                    return [];
-                };
+                // 智能合并：保留基础选项 + 自动添加用户输入的新词
+                const dynamicRegions = computed(() => {
+                    const list = items.value.map(i => i.region).filter(Boolean);
+                    return ['全部地区', ...new Set([...baseRegions, ...list])];
+                });
+                const dynamicTopics = computed(() => {
+                    const list = items.value.map(i => i.topic).filter(Boolean);
+                    return ['全部话题', ...new Set([...baseTopics, ...list])];
+                });
+                const dynamicBrands = computed(() => {
+                    const list = items.value.map(i => i.brand).filter(Boolean);
+                    return ['全部品牌', ...new Set([...baseBrands, ...list])];
+                });
 
-                const getDynamicRegions = computed(() => getRegionsByTab(currentTab.value));
-                const getDynamicTopics = computed(() => getTopicsByTab(currentTab.value));
                 const showFilters = computed(() => ['global', 'event'].includes(currentTab.value));
                 const filters = ref({ region: '全部地区', topic: '全部话题', brand: '全部品牌' });
 
@@ -339,49 +351,40 @@
                     return issueText + tabText;
                 });
 
-                // --- 智能排版双引擎 (Markdown + HTML) ---
+                const isValidContent = (htmlStr) => {
+                    if (!htmlStr) return false;
+                    const text = htmlStr.replace(/<[^>]+>/g, '').trim();
+                    return text.length > 0;
+                };
+
                 const smartRender = (text) => {
                     if (!text) return '';
-                    // 智能探测：如果字符串包含典型的富文本 HTML 标签（如 <p>, <li>），就当作新数据渲染
-                    if (/<[a-z][\s\S]*>/i.test(text)) {
-                        return text; 
-                    }
-                    // 否则，它是你以前留下的带有 ** 和 1. 2. 的老数据，调用 marked 解析引擎拯救它
+                    if (/<[a-z][\s\S]*>/i.test(text)) return text; 
                     return marked.parse(text, { breaks: true });
                 };
 
                 const stripAllFormatting = (text) => {
                     if (!text) return '';
                     let htmlStr = text;
-                    // 先转换旧 Markdown，再剥离所有 HTML 标签
-                    if (!/<[a-z][\s\S]*>/i.test(text)) {
-                        htmlStr = marked.parse(text);
-                    }
+                    if (!/<[a-z][\s\S]*>/i.test(text)) htmlStr = marked.parse(text);
                     let tmp = document.createElement("DIV");
                     tmp.innerHTML = htmlStr;
                     return tmp.textContent || tmp.innerText || "";
                 };
 
                 onMounted(async () => {
-                    // 初始化数据
-                    const localData = localStorage.getItem('edu_insight_master_v4');
+                    const localData = localStorage.getItem('edu_insight_master_v7');
                     if (localData) {
                         items.value = JSON.parse(localData);
                     } else {
                         try {
                             const res = await fetch('data.json?v=' + Date.now());
                             items.value = await res.json();
-                            localStorage.setItem('edu_insight_master_v4', JSON.stringify(items.value));
+                            localStorage.setItem('edu_insight_master_v7', JSON.stringify(items.value));
                         } catch (e) { items.value = []; }
                     }
 
-                    // 核心修复：只在网页加载时初始化一次编辑器，绝不再产生工具栏“双下巴”
-                    const toolbarOptions = [
-                        ['bold', 'italic', 'underline'],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link', 'clean']
-                    ];
-                    
+                    const toolbarOptions = [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link', 'clean']];
                     quillContent = new Quill('#editor-content', { theme: 'snow', modules: { toolbar: toolbarOptions } });
                     quillContent.on('text-change', () => { form.value.content = quillContent.root.innerHTML; });
 
@@ -389,7 +392,7 @@
                     quillValue.on('text-change', () => { form.value.value = quillValue.root.innerHTML; });
                 });
 
-                watch(items, (newVal) => { localStorage.setItem('edu_insight_master_v4', JSON.stringify(newVal)); }, { deep: true });
+                watch(items, (newVal) => { localStorage.setItem('edu_insight_master_v7', JSON.stringify(newVal)); }, { deep: true });
 
                 const filteredList = computed(() => {
                     let list = items.value.filter(i => {
@@ -403,7 +406,6 @@
                         }
                         return true;
                     });
-                    // 最新上传（ID 时间戳最大）永远排前面
                     return list.sort((a, b) => b.id - a.id);
                 });
 
@@ -415,14 +417,12 @@
 
                     form.value = { 
                         id: Date.now(), tab: fallbackTab, issue: latestIssue, issueDateRange: existingRange,
-                        date: new Date().toISOString().split('T')[0], eventDate: '', title: '', content: '', value: '', 
-                        region: getRegionsByTab(fallbackTab)[1] || '', topic: getTopicsByTab(fallbackTab)[1] || '', brand: brands[0]
+                        date: new Date().toISOString().split('T')[0], title: '', content: '', value: '', 
+                        region: '', topic: '', brand: ''
                     };
                     
-                    // 将新表单的内容注入已经存在的唯一编辑器中
-                    quillContent.root.innerHTML = form.value.content || '';
-                    quillValue.root.innerHTML = form.value.value || '';
-                    
+                    quillContent.root.innerHTML = '';
+                    quillValue.root.innerHTML = '';
                     showForm.value = true;
                 };
 
@@ -430,7 +430,6 @@
                     isEditing.value = true;
                     form.value = { ...item };
                     
-                    // 为了兼容修改以前的 Markdown 老数据，编辑时智能转换成富文本让编辑器读取
                     let editContent = form.value.content || form.value.intro || '';
                     if (editContent && !/<[a-z][\s\S]*>/i.test(editContent)) editContent = marked.parse(editContent, { breaks: true });
                     
@@ -439,7 +438,6 @@
 
                     quillContent.root.innerHTML = editContent;
                     quillValue.root.innerHTML = editValue;
-                    
                     showForm.value = true;
                 };
 
@@ -460,15 +458,15 @@
                 };
 
                 const deleteItem = (id) => { if (confirm('确定要永久删除这条动态吗？')) items.value = items.value.filter(i => i.id !== id); };
-                const verify = () => { if (pass.value === 'cz') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; } else alert('密码验证失败'); };
+                const verify = () => { if (pass.value === 'cuixinyun') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; } else alert('密码验证失败'); };
                 const viewDetail = (item) => { detailItem.value = item; };
                 const copyFullJson = () => { navigator.clipboard.writeText(JSON.stringify(items.value, null, 2)).then(() => alert('全量数据已复制！请去 GitHub 覆盖。')); };
-                const clearLocalCache = () => { if(confirm('确定清除本地缓存拉取云端数据吗？')) { localStorage.removeItem('edu_insight_master_v4'); location.reload(); } };
+                const clearLocalCache = () => { if(confirm('确定清除本地缓存拉取云端数据吗？')) { localStorage.removeItem('edu_insight_master_v7'); location.reload(); } };
 
                 return { 
                     items, currentTab, currentIssue, filteredList, issueList, detailItem, isAuthorized, showAuthModal, showForm, isEditing, 
-                    form, categories, brands, openAddForm, editItem, saveForm, deleteItem, verify, viewDetail, smartRender, stripAllFormatting, copyFullJson, 
-                    clearLocalCache, getRegionsByTab, getTopicsByTab, headerTitle, getDynamicRegions, getDynamicTopics, showFilters, filters, issueListWithDates, pass 
+                    form, categories, openAddForm, editItem, saveForm, deleteItem, verify, viewDetail, smartRender, stripAllFormatting, copyFullJson, 
+                    clearLocalCache, headerTitle, dynamicRegions, dynamicTopics, dynamicBrands, showFilters, filters, issueListWithDates, pass, isValidContent 
                 };
             }
         }).mount('#app');
