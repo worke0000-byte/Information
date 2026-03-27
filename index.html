@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全球教育资讯与地区动态</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&display=swap" rel="stylesheet">
     <style>
         [v-cloak] { display: none; }
@@ -49,7 +50,6 @@
             <nav class="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scroll">
                 <div class="space-y-1 mb-6">
                     <button @click="setTab('all')" :class="['w-full flex items-center px-5 py-3.5 rounded-xl text-sm font-bold transition-all', currentTab === 'all' ? 'sidebar-active' : 'text-slate-400 hover:text-white hover:bg-white/5']">🌟 综合板块概览</button>
-                    
                     <button v-for="(v, k) in categories" :key="k" @click="setTab(k)" 
                         :class="['w-full flex items-center px-5 py-3.5 rounded-xl text-sm font-bold transition-all', currentTab === k ? 'sidebar-active' : 'text-slate-400 hover:text-white hover:bg-white/5']">
                         {{ v.icon }} {{ v.title }}
@@ -150,7 +150,10 @@
                                 </span>
                             </div>
                             <h3 class="art-title text-30px text-slate-800 line-clamp-2 leading-snug mb-4 break-words">{{ item.title || item.company }}</h3>
-                            <p class="text-slate-500 text-base leading-relaxed line-clamp-2 font-light break-words flex-1">{{ item.content || item.intro }}</p>
+                            
+                            <p class="text-slate-500 text-base leading-relaxed line-clamp-2 font-light break-words flex-1">
+                                {{ stripMarkdown(item.content || item.intro) }}
+                            </p>
                         </div>
 
                         <div class="mt-6 flex flex-col gap-4 border-t border-slate-100 pt-6">
@@ -159,7 +162,7 @@
                                     <span class="font-black not-italic text-amber-900 mr-1">
                                         💡 {{ item.tab === 'ai' || item.tab === 'hardware' ? '功能介绍' : '业务价值' }}：
                                     </span>
-                                    {{ item.value }}
+                                    {{ stripMarkdown(item.value) }}
                                 </p>
                             </div>
                             <div class="flex justify-end">
@@ -197,17 +200,19 @@
                                 <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">
                                     {{ detailItem.tab === 'ai' || detailItem.tab === 'hardware' ? '公司介绍' : '内容分析' }}
                                 </p>
-                                <p class="text-xl md:text-2xl text-slate-600 leading-relaxed font-light whitespace-pre-wrap break-words">{{ detailItem.content || detailItem.intro }}</p>
+                                <div class="prose prose-lg md:prose-xl prose-slate max-w-none font-light leading-relaxed break-words" 
+                                     v-html="renderMarkdown(detailItem.content || detailItem.intro)">
+                                </div>
                             </div>
                             
                             <div v-if="detailItem.value" class="bg-[#fef9c3]/40 p-10 md:p-12 rounded-[40px] border border-amber-200/50 relative mt-16 w-full">
                                 <span class="absolute -top-8 left-8 text-7xl text-amber-300/60 font-serif">“</span>
-                                <p class="text-24px text-amber-900 font-bold leading-relaxed italic whitespace-pre-wrap relative z-10 break-words w-full"> 
+                                <div class="text-24px text-amber-900 font-bold leading-relaxed italic whitespace-pre-wrap relative z-10 break-words w-full"> 
                                     <span class="font-black not-italic text-amber-700 block mb-3 text-xl">
                                         💡 {{ detailItem.tab === 'ai' || detailItem.tab === 'hardware' ? '功能介绍' : '业务价值' }}：
                                     </span>
-                                    {{ detailItem.value }} 
-                                </p>
+                                    <span v-html="renderMarkdown(detailItem.value)"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -286,16 +291,21 @@
                             </div>
 
                             <div class="space-y-2">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    {{ form.tab === 'ai' || form.tab === 'hardware' ? '公司介绍' : '内容分析' }}
-                                </label>
-                                <textarea v-model="form.content" :placeholder="form.tab === 'ai' || form.tab === 'hardware' ? '输入公司背景与简介...' : '在此输入深度内容分析...'" rows="6" class="w-full bg-slate-50 p-5 rounded-2xl border-none text-lg focus:ring-2 focus:ring-indigo-500"></textarea>
+                                <div class="flex justify-between items-end mb-1">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                        {{ form.tab === 'ai' || form.tab === 'hardware' ? '公司介绍' : '内容分析' }}
+                                    </label>
+                                    <span class="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded">支持 Markdown 语法排版</span>
+                                </div>
+                                <textarea v-model="form.content" :placeholder="form.tab === 'ai' || form.tab === 'hardware' ? '输入公司背景与简介... (可直接粘贴 Markdown)' : '在此输入深度内容分析... (可直接粘贴 Markdown)'" rows="6" class="w-full bg-slate-50 p-5 rounded-2xl border-none text-lg focus:ring-2 focus:ring-indigo-500"></textarea>
                             </div>
 
                             <div class="space-y-2">
-                                <label class="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">
-                                    💡 {{ form.tab === 'ai' || form.tab === 'hardware' ? '功能介绍' : '业务价值' }} (选填)
-                                </label>
+                                <div class="flex justify-between items-end mb-1">
+                                    <label class="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">
+                                        💡 {{ form.tab === 'ai' || form.tab === 'hardware' ? '功能介绍' : '业务价值' }} (选填)
+                                    </label>
+                                </div>
                                 <textarea v-model="form.value" :placeholder="form.tab === 'ai' || form.tab === 'hardware' ? '详细列出核心功能...' : '提取战略洞察与业务价值...'" rows="3" class="w-full bg-amber-50/50 p-5 rounded-2xl border-none text-lg text-amber-900 font-medium italic focus:ring-2 focus:ring-amber-500"></textarea>
                             </div>
                             
@@ -417,18 +427,14 @@
                     filters.value.brand = '全部品牌';
                 };
 
-                // 核心：彻底修复旧浏览器不更新 JSON 缓存的问题
                 onMounted(async () => {
                     try {
-                        // 1. 强制去云端拉取最新数据，避开死缓存
                         const res = await fetch(`data.json?v=${Date.now()}`);
                         const remoteData = await res.json();
                         
-                        // 2. 读取本地缓存
                         const localDataStr = localStorage.getItem('edu_insight_data');
                         const localData = localDataStr ? JSON.parse(localDataStr) : [];
 
-                        // 3. 智能对比：本地条数如果更多，说明有未保存草稿，保留本地。否则以云端为准！
                         if (localData.length > remoteData.length) {
                             items.value = localData;
                         } else {
@@ -436,7 +442,6 @@
                             localStorage.setItem('edu_insight_data', JSON.stringify(remoteData));
                         }
                     } catch(e) { 
-                        // 断网或拉取失败时使用本地兜底
                         const localDataStr = localStorage.getItem('edu_insight_data');
                         items.value = localDataStr ? JSON.parse(localDataStr) : []; 
                     }
@@ -469,7 +474,7 @@
 
                 const viewDetail = (item) => { detailItem.value = item; };
                 const verify = () => {
-                    if(pass.value === 'cz') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; }
+                    if(pass.value === 'cuixinyun') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; }
                     else alert('验证失败');
                 };
 
@@ -533,7 +538,20 @@
                     }
                 };
 
-                return { currentTab, currentIssue, categories, brands, issueListWithDates, filteredList, detailItem, filters, getDynamicRegions, getDynamicTopics, showFilters, isAuthorized, showAuthModal, pass, verify, viewDetail, showForm, isEditing, form, setTab, setIssue, openAddForm, editItem, deleteItem, saveContent, copyFullJson, clearLocalCache, getRegionsByTab, getTopicsByTab, headerTitle };
+                /* 核心补充：Markdown 解析与剥离方法 */
+                const renderMarkdown = (text) => {
+                    if (!text) return '';
+                    // 使用 marked 解析，并将换行符转换为 <br>
+                    return marked.parse(text, { breaks: true });
+                };
+
+                const stripMarkdown = (text) => {
+                    if (!text) return '';
+                    // 简单的正则，剥离掉 #, *, -, >, `, 以及超链接符号，让首页卡片文字保持纯净
+                    return text.replace(/[#*>`~_]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/\n/g, ' ');
+                };
+
+                return { currentTab, currentIssue, categories, brands, issueListWithDates, filteredList, detailItem, filters, getDynamicRegions, getDynamicTopics, showFilters, isAuthorized, showAuthModal, pass, verify, viewDetail, showForm, isEditing, form, setTab, setIssue, openAddForm, editItem, deleteItem, saveContent, copyFullJson, clearLocalCache, getRegionsByTab, getTopicsByTab, headerTitle, renderMarkdown, stripMarkdown };
             }
         }).mount('#app');
     </script>
