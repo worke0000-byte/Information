@@ -39,7 +39,7 @@
         .fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.3s ease-out; }
         .fade-slide-enter-from, .fade-slide-leave-to { opacity: 0; transform: translateX(-10px); }
 
-        /* 定制富文本编辑器外观 */
+        /* 定制富文本编辑器外观，使其融入我们高级的 UI 设计 */
         .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid #f1f5f9 !important; background-color: #f8fafc; border-radius: 1rem 1rem 0 0; padding: 12px 20px !important; }
         .ql-container.ql-snow { border: none !important; font-family: inherit; font-size: 1.125rem; }
         .ql-editor { min-height: 200px; padding: 20px !important; }
@@ -236,7 +236,7 @@
             </div>
         </transition>
 
-        <div v-if="showForm" class="fixed inset-0 bg-slate-900/95 backdrop-blur-xl flex items-center justify-center z-[200] p-6">
+        <div v-show="showForm" class="fixed inset-0 bg-slate-900/95 backdrop-blur-xl flex items-center justify-center z-[200] p-6" style="display: none;">
             <div class="bg-white rounded-[40px] w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
                 <header class="p-8 md:p-12 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-100 gap-6 flex-shrink-0">
                     <h3 class="art-title text-3xl">{{ isEditing ? '修改动态内容' : '发布全新动态' }}</h3>
@@ -267,7 +267,7 @@
 
                             <div class="grid grid-cols-2 gap-6">
                                 <div class="space-y-2">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">发布日期 (仅供参考)</label>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">发布日期 (仅供记录)</label>
                                     <input v-model="form.date" type="date" class="w-full bg-slate-50 p-4 rounded-2xl border-none font-bold focus:ring-2 focus:ring-indigo-500">
                                 </div>
                             </div>
@@ -297,7 +297,7 @@
                             </transition>
 
                             <div v-if="form.tab === 'event'" class="space-y-2">
-                                <label class="text-[10px] font-bold text-indigo-500 uppercase ml-1 underline">活动日期预告 (仅供参考)</label>
+                                <label class="text-[10px] font-bold text-indigo-500 uppercase ml-1 underline">活动日期预告 (供参考)</label>
                                 <input v-model="form.eventDate" type="date" class="w-full bg-indigo-50 p-4 rounded-2xl border-none font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500">
                             </div>
 
@@ -376,7 +376,7 @@
                     hardware: { title: '教育硬件', icon: '📟' }
                 };
 
-                const brands = ['RSM', 'AoPS', 'Kumon', 'Mathnasium', '数研', 'Math Concept', 'The Learning Lab', '其他'];
+                const brands = ['RSM', 'AoPS', 'Kumon', 'Mathnasium', '数研', 'Math Concept', 'The Learning Lab'];
 
                 const getRegionsByTab = (tab) => {
                     if (tab === 'global') return ['全部地区', '美国', '香港', '新加坡', '马来西亚', '澳大利亚'];
@@ -392,7 +392,6 @@
 
                 const getDynamicRegions = computed(() => getRegionsByTab(currentTab.value));
                 const getDynamicTopics = computed(() => getTopicsByTab(currentTab.value));
-                
                 const showFilters = computed(() => ['global', 'event'].includes(currentTab.value));
 
                 const filters = ref({ region: '全部地区', topic: '全部话题', brand: '全部品牌' });
@@ -486,23 +485,27 @@
                             return true;
                         })
                         .sort((a, b) => {
-                            // 强制按最新添加（时间戳ID）降序排列，最新添加的永远在最前！
+                            // 核心功能更新：彻底废弃基于日期的排序
+                            // 强行基于数据 ID（即创建/上传时的时间戳 Date.now()）降序排列
+                            // 保证“最新录入/上传的动态”永远排在首页最前面
                             return b.id - a.id;
                         });
                 });
 
                 const viewDetail = (item) => { detailItem.value = item; };
                 const verify = () => {
-                    if(pass.value === 'cz') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; }
+                    if(pass.value === 'cuixinyun') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; }
                     else alert('验证失败');
                 };
 
-                // 初始化富文本编辑器 (Quill)
+                // 初始化富文本编辑器
                 const setupEditors = () => {
                     nextTick(() => {
+                        // 清空旧容器，防止叠加
                         document.getElementById('editor-content').innerHTML = '';
                         document.getElementById('editor-value').innerHTML = '';
 
+                        // 配置工具栏（加粗、斜体、下划线、有序/无序列表、链接、清除格式）
                         const toolbarOptions = [
                             ['bold', 'italic', 'underline'],
                             [{ 'list': 'ordered'}, { 'list': 'bullet' }],
@@ -513,7 +516,9 @@
                             theme: 'snow',
                             modules: { toolbar: toolbarOptions }
                         });
+                        // 注入旧内容
                         quillContent.root.innerHTML = form.value.content || '';
+                        // 监听改动实时绑定到 Vue
                         quillContent.on('text-change', () => { form.value.content = quillContent.root.innerHTML; });
 
                         const quillValue = new Quill('#editor-value', {
@@ -529,7 +534,6 @@
                     isEditing.value = false;
                     const latestIssue = items.value[0]?.issue || 1;
                     const existingRange = items.value.find(i => i.issue == latestIssue)?.issueDateRange || '';
-                    
                     const fallbackTab = currentTab.value === 'all' ? 'global' : currentTab.value;
 
                     form.value = { 
@@ -541,7 +545,6 @@
                         brand: brands[0]
                     };
                     showForm.value = true;
-                    // 开启弹窗后，渲染编辑器
                     setupEditors();
                 };
 
@@ -549,7 +552,6 @@
                     isEditing.value = true;
                     form.value = { ...item };
                     showForm.value = true;
-                    // 开启弹窗后，渲染编辑器
                     setupEditors();
                 };
 
@@ -573,8 +575,7 @@
                         const idx = items.value.findIndex(i => i.id === form.value.id);
                         items.value[idx] = { ...form.value };
                     } else {
-                        // id使用当前时间戳，确保最新的排序永远最靠前
-                        items.value.unshift({ ...form.value, id: Date.now() });
+                        items.value.unshift({ ...form.value });
                     }
                     showForm.value = false;
                 };
@@ -590,7 +591,7 @@
                     }
                 };
 
-                // 去除 HTML 标签，保证首页摘要不出现代码乱码
+                // 去除 HTML 标签函数：用于在首页卡片上显示纯净摘要
                 const stripHtml = (htmlStr) => {
                     if (!htmlStr) return '';
                     let tmp = document.createElement("DIV");
