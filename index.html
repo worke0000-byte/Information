@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全球教育资讯与地区动态-管理系统</title>
+    <title>全球教育资讯与地区动态-稳定版</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&display=swap" rel="stylesheet">
     
     <style>
@@ -16,38 +20,32 @@
         body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background-color: #f8fafc; color: #1e293b; }
         .art-title { font-family: 'Noto Serif SC', serif; letter-spacing: -0.01em; }
 
-        /* --- 核心排版对齐：确保编辑器内和主页显示完全一致 --- */
-        .ql-editor, .prose-custom {
-            font-size: 1.125rem !important;
-            line-height: 1.8 !important;
-            color: #334155 !important;
-        }
-        .ql-editor p, .prose-custom p { margin-bottom: 1.5rem !important; }
-        .ql-editor strong, .prose-custom strong { color: #0f172a; font-weight: 800; }
-        .ql-editor ul, .prose-custom ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.5rem; }
+        /* 核心修复 3：排版紧凑优化，解决图3中间距过大的问题 */
+        .prose-tight { font-size: 1.125rem; line-height: 1.7; color: #334155; }
+        .prose-tight p { margin-top: 0.5em; margin-bottom: 0.75em; }
+        .prose-tight ul, .prose-tight ol { padding-left: 1.5rem; margin-top: 0.5em; margin-bottom: 0.75em; }
+        .prose-tight li { margin-top: 0.25em; margin-bottom: 0.25em; }
+        .prose-tight li p { margin: 0; display: inline; } /* 防止列表内段落换行 */
+        .prose-tight strong { color: #0f172a; font-weight: 800; }
+        .prose-tight a { color: #4f46e5; text-decoration: underline; }
 
-        /* --- UI 组件样式 --- */
+        /* 编辑器内排版对齐 */
+        .ql-editor { font-size: 1.125rem; line-height: 1.7; color: #334155; min-height: 300px; padding: 24px !important; }
+        .ql-editor p { margin-bottom: 0.75em; }
+        .ql-editor li { padding-bottom: 0.25em; }
+
+        /* UI 组件样式 */
         .sidebar-item { transition: all 0.2s; border: 1px solid transparent; }
         .sidebar-active { background: white; color: #4f46e5; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #f1f5f9; }
         
-        .card-art { 
-            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); 
-            border: 1px solid #f1f5f9; 
-            background: white;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
+        .card-art { transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); border: 1px solid #f1f5f9; background: white; display: flex; flex-direction: column; height: 100%; }
         .card-art:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); }
-
-        /* 隐藏滚动条但保留功能 */
         .hide-scroll::-webkit-scrollbar { width: 0px; background: transparent; }
 
         /* 编辑器美化 */
         .editor-container { border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; background: white; }
         .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid #f1f5f9 !important; background: #f8fafc; padding: 12px !important; }
         .ql-container.ql-snow { border: none !important; }
-        .ql-editor { min-height: 300px; padding: 24px !important; }
         
         .animate-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -112,6 +110,32 @@
                             <span v-if="currentIssue !== '全部'" class="text-slate-400 text-xs font-bold uppercase">Issue No.{{ currentIssue }}</span>
                         </div>
                     </div>
+
+                    <div v-if="showFilters" class="flex flex-wrap gap-4 items-end bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Region / 地区</label>
+                            <select v-model="filters.region" class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-16px font-bold outline-none h-11 min-w-[120px]">
+                                <option value="全部地区">全部地区</option>
+                                <option v-for="r in getDynamicRegions" :key="r" :value="r">{{r}}</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Topic / 话题</label>
+                            <select v-model="filters.topic" class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-16px font-bold outline-none h-11 min-w-[120px]">
+                                <option value="全部话题">全部话题</option>
+                                <option v-for="t in getDynamicTopics" :key="t" :value="t">{{t}}</option>
+                            </select>
+                        </div>
+                        <transition name="fade-slide">
+                            <div v-if="filters.topic === '竞品动态'" class="flex flex-col gap-1.5 border-l pl-4 border-slate-200">
+                                <label class="text-[10px] font-black text-indigo-500 uppercase tracking-widest pl-1">Brand / 品牌</label>
+                                <select v-model="filters.brand" class="bg-indigo-600 text-white border-none rounded-xl px-4 py-2 text-16px font-bold outline-none h-11 min-w-[140px] shadow-sm">
+                                    <option value="全部品牌">全部品牌</option>
+                                    <option v-for="b in brands" :key="b" :value="b">{{b}}</option>
+                                </select>
+                            </div>
+                        </transition>
+                    </div>
                 </div>
             </header>
 
@@ -131,13 +155,14 @@
                                 <span class="text-xs font-bold text-slate-300 italic">{{ item.date }}</span>
                             </div>
                             <h3 class="art-title text-3xl text-slate-800 font-black mb-6 leading-tight group-hover:text-indigo-600 transition-colors">{{ item.title }}</h3>
-                            <div class="text-slate-500 text-base leading-relaxed line-clamp-3 mb-8 prose-custom" v-html="stripHtml(item.content)"></div>
+                            
+                            <div class="text-slate-500 text-base leading-relaxed line-clamp-3 mb-8 prose-tight" v-html="stripAllFormatting(item.content || item.intro)"></div>
                         </div>
 
                         <div v-if="item.value" class="mt-4 pt-8 border-t border-slate-50">
                             <div class="bg-amber-50/70 p-6 rounded-3xl border border-amber-100/50">
                                 <p class="text-amber-900 text-sm font-bold leading-relaxed italic">
-                                    <span class="not-italic mr-2">💡</span>{{ stripHtml(item.value) }}
+                                    <span class="not-italic mr-2">💡</span>{{ stripAllFormatting(item.value) }}
                                 </p>
                             </div>
                         </div>
@@ -162,22 +187,27 @@
                             <p class="text-slate-400 font-bold italic">{{ detailItem.date }} 发布</p>
                         </header>
 
-                        <div class="prose-custom max-w-none mb-16" v-html="detailItem.content"></div>
+                        <div class="mb-16">
+                            <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6">
+                                {{ detailItem.tab === 'ai' || detailItem.tab === 'hardware' ? '公司介绍' : '内容分析' }}
+                            </p>
+                            <div class="prose-tight break-words" v-html="smartRender(detailItem.content || detailItem.intro)"></div>
+                        </div>
 
                         <div v-if="detailItem.value" class="bg-amber-50 rounded-[40px] p-10 md:p-14 border border-amber-100/50 relative">
                             <span class="absolute -top-6 left-10 text-6xl text-amber-200 font-serif opacity-50">“</span>
                             <h4 class="text-amber-900 font-black text-xl mb-6 flex items-center gap-2">
                                 <span>💡</span> 业务价值分析
                             </h4>
-                            <div class="prose-custom text-amber-800 italic" v-html="detailItem.value"></div>
+                            <div class="prose-tight text-amber-800 italic" v-html="smartRender(detailItem.value)"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </transition>
 
-        <div v-if="showForm" class="fixed inset-0 z-[200] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-6xl h-[90vh] rounded-[40px] shadow-2xl flex flex-col overflow-hidden animate-in">
+        <div v-show="showForm" style="display: none;" class="fixed inset-0 z-[200] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-6xl h-[90vh] rounded-[40px] shadow-2xl flex flex-col overflow-hidden">
                 <header class="px-10 py-8 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0">
                     <h3 class="art-title text-2xl font-black">{{ isEditing ? '编辑动态内容' : '发布全新动态' }}</h3>
                     <div class="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
@@ -210,7 +240,9 @@
                     </div>
 
                     <div class="space-y-3">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">正文深度分析 (所见即所得)</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 flex justify-between">
+                            <span>{{ form.tab === 'ai' || form.tab === 'hardware' ? '公司介绍' : '正文深度分析' }} (支持直接粘贴Word图文)</span>
+                        </label>
                         <div class="editor-container"><div id="editor-content"></div></div>
                     </div>
 
@@ -238,10 +270,9 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+        const { createApp, ref, computed, onMounted, watch } = Vue;
         createApp({
             setup() {
-                // 状态定义
                 const items = ref([]);
                 const currentTab = ref('all');
                 const currentIssue = ref('全部');
@@ -252,7 +283,10 @@
                 const isEditing = ref(false);
                 const pass = ref('');
                 const form = ref({});
-                let quillContent, quillValue;
+                
+                // 全局保存 Quill 实例，防止双重加载
+                let quillContent = null;
+                let quillValue = null;
 
                 const categories = {
                     global: { title: '全球教育资讯', icon: '🌐' },
@@ -260,128 +294,181 @@
                     ai: { title: 'AI技术发展', icon: '🧠' },
                     hardware: { title: '教育硬件', icon: '📟' }
                 };
+                const brands = ['RSM', 'AoPS', 'Kumon', 'Mathnasium', '数研', 'Math Concept', 'The Learning Lab', '其他'];
 
-                // --- 数据加载逻辑 ---
+                const getRegionsByTab = (tab) => {
+                    if (tab === 'global') return ['全部地区', '美国', '香港', '新加坡', '马来西亚', '澳大利亚'];
+                    if (tab === 'event') return ['全部地区', '硅谷', '尔湾', '西雅图', '香港', '新加坡', '马来西亚', '澳大利亚'];
+                    return [];
+                };
+
+                const getTopicsByTab = (tab) => {
+                    if (tab === 'global') return ['全部话题', '宏观政策', '竞品动态'];
+                    if (tab === 'event') return ['全部话题', '教育动向', '教育活动', '社区活动'];
+                    return [];
+                };
+
+                const getDynamicRegions = computed(() => getRegionsByTab(currentTab.value));
+                const getDynamicTopics = computed(() => getTopicsByTab(currentTab.value));
+                const showFilters = computed(() => ['global', 'event'].includes(currentTab.value));
+                const filters = ref({ region: '全部地区', topic: '全部话题', brand: '全部品牌' });
+
+                watch(() => filters.value.topic, (newTopic) => {
+                    if (newTopic !== '竞品动态') filters.value.brand = '全部品牌';
+                });
+
+                watch(() => form.value.issue, (newIssue) => {
+                    if (newIssue) {
+                        const existingItem = items.value.find(i => i.issue == newIssue && i.issueDateRange);
+                        if (existingItem) form.value.issueDateRange = existingItem.issueDateRange;
+                        else if (!isEditing.value) form.value.issueDateRange = '';
+                    }
+                });
+
+                const issueList = computed(() => [...new Set(items.value.map(i => i.issue))].sort((a, b) => b - a));
+                const issueListWithDates = computed(() => {
+                    const issueMap = {};
+                    items.value.forEach(item => { if (!issueMap[item.issue] && item.issueDateRange) issueMap[item.issue] = item.issueDateRange; });
+                    return issueList.value.map(no => ({ no, range: issueMap[no] || '' }));
+                });
+
+                const headerTitle = computed(() => {
+                    let issueText = currentIssue.value === '全部' ? '' : `No.${currentIssue.value} 期 `;
+                    let tabText = currentTab.value === 'all' ? '综合总览' : categories[currentTab.value].title;
+                    if (!issueText && currentTab.value === 'all') return '全站动态总览';
+                    return issueText + tabText;
+                });
+
+                // --- 智能排版双引擎 (Markdown + HTML) ---
+                const smartRender = (text) => {
+                    if (!text) return '';
+                    // 智能探测：如果字符串包含典型的富文本 HTML 标签（如 <p>, <li>），就当作新数据渲染
+                    if (/<[a-z][\s\S]*>/i.test(text)) {
+                        return text; 
+                    }
+                    // 否则，它是你以前留下的带有 ** 和 1. 2. 的老数据，调用 marked 解析引擎拯救它
+                    return marked.parse(text, { breaks: true });
+                };
+
+                const stripAllFormatting = (text) => {
+                    if (!text) return '';
+                    let htmlStr = text;
+                    // 先转换旧 Markdown，再剥离所有 HTML 标签
+                    if (!/<[a-z][\s\S]*>/i.test(text)) {
+                        htmlStr = marked.parse(text);
+                    }
+                    let tmp = document.createElement("DIV");
+                    tmp.innerHTML = htmlStr;
+                    return tmp.textContent || tmp.innerText || "";
+                };
+
                 onMounted(async () => {
-                    const localData = localStorage.getItem('edu_insight_master_v3');
+                    // 初始化数据
+                    const localData = localStorage.getItem('edu_insight_master_v4');
                     if (localData) {
                         items.value = JSON.parse(localData);
                     } else {
                         try {
                             const res = await fetch('data.json?v=' + Date.now());
                             items.value = await res.json();
+                            localStorage.setItem('edu_insight_master_v4', JSON.stringify(items.value));
                         } catch (e) { items.value = []; }
                     }
+
+                    // 核心修复：只在网页加载时初始化一次编辑器，绝不再产生工具栏“双下巴”
+                    const toolbarOptions = [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'clean']
+                    ];
+                    
+                    quillContent = new Quill('#editor-content', { theme: 'snow', modules: { toolbar: toolbarOptions } });
+                    quillContent.on('text-change', () => { form.value.content = quillContent.root.innerHTML; });
+
+                    quillValue = new Quill('#editor-value', { theme: 'snow', modules: { toolbar: toolbarOptions } });
+                    quillValue.on('text-change', () => { form.value.value = quillValue.root.innerHTML; });
                 });
 
-                // --- 排序与筛选逻辑 ---
+                watch(items, (newVal) => { localStorage.setItem('edu_insight_master_v4', JSON.stringify(newVal)); }, { deep: true });
+
                 const filteredList = computed(() => {
                     let list = items.value.filter(i => {
-                        const tabMatch = currentTab.value === 'all' || i.tab === currentTab.value;
-                        const issueMatch = currentIssue.value === '全部' || i.issue == currentIssue.value;
-                        return tabMatch && issueMatch;
+                        if (currentIssue.value !== '全部' && i.issue != currentIssue.value) return false;
+                        if (currentTab.value !== 'all' && i.tab !== currentTab.value) return false;
+                        if (showFilters.value) {
+                            const r = filters.value.region === '全部地区' || i.region === filters.value.region;
+                            const t = filters.value.topic === '全部话题' || i.topic === filters.value.topic;
+                            const b = filters.value.brand === '全部品牌' || i.brand === filters.value.brand;
+                            return r && t && b;
+                        }
+                        return true;
                     });
-                    // 核心：最新上传（ID 越大）排在越前面
+                    // 最新上传（ID 时间戳最大）永远排前面
                     return list.sort((a, b) => b.id - a.id);
                 });
 
-                const issueList = computed(() => {
-                    const issues = items.value.map(i => i.issue);
-                    return [...new Set(issues)].sort((a, b) => b - a);
-                });
-
-                // --- 编辑器初始化 ---
-                const initQuill = () => {
-                    nextTick(() => {
-                        const toolbarOptions = [
-                            ['bold', 'italic', 'underline'],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                            ['link', 'clean']
-                        ];
-                        
-                        // 正文编辑器
-                        quillContent = new Quill('#editor-content', { theme: 'snow', modules: { toolbar: toolbarOptions } });
-                        quillContent.root.innerHTML = form.value.content || '';
-                        
-                        // 价值分析编辑器
-                        quillValue = new Quill('#editor-value', { theme: 'snow', modules: { toolbar: toolbarOptions } });
-                        quillValue.root.innerHTML = form.value.value || '';
-                    });
-                };
-
-                // --- 表单操作 ---
                 const openAddForm = () => {
                     isEditing.value = false;
+                    const latestIssue = items.value[0]?.issue || 1;
+                    const existingRange = items.value.find(i => i.issue == latestIssue)?.issueDateRange || '';
+                    const fallbackTab = currentTab.value === 'all' ? 'global' : currentTab.value;
+
                     form.value = { 
-                        id: Date.now(), 
-                        tab: currentTab.value === 'all' ? 'global' : currentTab.value, 
-                        issue: issueList.value[0] || 1, 
-                        date: new Date().toISOString().split('T')[0], 
-                        title: '', content: '', value: '', region: '' 
+                        id: Date.now(), tab: fallbackTab, issue: latestIssue, issueDateRange: existingRange,
+                        date: new Date().toISOString().split('T')[0], eventDate: '', title: '', content: '', value: '', 
+                        region: getRegionsByTab(fallbackTab)[1] || '', topic: getTopicsByTab(fallbackTab)[1] || '', brand: brands[0]
                     };
+                    
+                    // 将新表单的内容注入已经存在的唯一编辑器中
+                    quillContent.root.innerHTML = form.value.content || '';
+                    quillValue.root.innerHTML = form.value.value || '';
+                    
                     showForm.value = true;
-                    initQuill();
                 };
 
                 const editItem = (item) => {
                     isEditing.value = true;
                     form.value = { ...item };
+                    
+                    // 为了兼容修改以前的 Markdown 老数据，编辑时智能转换成富文本让编辑器读取
+                    let editContent = form.value.content || form.value.intro || '';
+                    if (editContent && !/<[a-z][\s\S]*>/i.test(editContent)) editContent = marked.parse(editContent, { breaks: true });
+                    
+                    let editValue = form.value.value || '';
+                    if (editValue && !/<[a-z][\s\S]*>/i.test(editValue)) editValue = marked.parse(editValue, { breaks: true });
+
+                    quillContent.root.innerHTML = editContent;
+                    quillValue.root.innerHTML = editValue;
+                    
                     showForm.value = true;
-                    initQuill();
                 };
 
                 const saveForm = () => {
                     if (!form.value.title) return alert('请填写标题');
-                    
                     form.value.content = quillContent.root.innerHTML;
                     form.value.value = quillValue.root.innerHTML;
                     
+                    items.value.forEach(i => { if (i.issue == form.value.issue) i.issueDateRange = form.value.issueDateRange; });
+
                     if (isEditing.value) {
                         const idx = items.value.findIndex(i => i.id === form.value.id);
                         items.value[idx] = { ...form.value };
                     } else {
-                        // 新增一条，并赋予当前时间戳 ID
                         items.value.unshift({ ...form.value, id: Date.now() });
                     }
-                    
-                    localStorage.setItem('edu_insight_master_v3', JSON.stringify(items.value));
                     showForm.value = false;
-                    alert('保存成功！别忘了点击左侧“导出”更新 GitHub 数据。');
                 };
 
-                const deleteItem = (id) => {
-                    if (confirm('确定要永久删除这条动态吗？')) {
-                        items.value = items.value.filter(i => i.id !== id);
-                        localStorage.setItem('edu_insight_master_v3', JSON.stringify(items.value));
-                    }
-                };
-
-                const verify = () => {
-                    if (pass.value === 'cuixinyun') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; }
-                    else { alert('密码验证失败'); }
-                };
-
+                const deleteItem = (id) => { if (confirm('确定要永久删除这条动态吗？')) items.value = items.value.filter(i => i.id !== id); };
+                const verify = () => { if (pass.value === 'cz') { isAuthorized.value = true; showAuthModal.value = false; pass.value = ''; } else alert('密码验证失败'); };
                 const viewDetail = (item) => { detailItem.value = item; };
-
-                // --- 辅助功能 ---
-                const stripHtml = (html) => {
-                    if (!html) return '';
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-                    return doc.body.textContent || "";
-                };
-
-                const copyFullJson = () => {
-                    const dataStr = JSON.stringify(items.value, null, 2);
-                    navigator.clipboard.writeText(dataStr).then(() => {
-                        alert('【全量数据已复制】\n请前往 GitHub 的 data.json 文件，全选并粘贴覆盖。');
-                    });
-                };
+                const copyFullJson = () => { navigator.clipboard.writeText(JSON.stringify(items.value, null, 2)).then(() => alert('全量数据已复制！请去 GitHub 覆盖。')); };
+                const clearLocalCache = () => { if(confirm('确定清除本地缓存拉取云端数据吗？')) { localStorage.removeItem('edu_insight_master_v4'); location.reload(); } };
 
                 return { 
-                    items, currentTab, currentIssue, filteredList, issueList, 
-                    detailItem, isAuthorized, showAuthModal, showForm, isEditing, 
-                    form, categories, openAddForm, editItem, saveForm, deleteItem, 
-                    verify, viewDetail, stripHtml, copyFullJson, pass 
+                    items, currentTab, currentIssue, filteredList, issueList, detailItem, isAuthorized, showAuthModal, showForm, isEditing, 
+                    form, categories, brands, openAddForm, editItem, saveForm, deleteItem, verify, viewDetail, smartRender, stripAllFormatting, copyFullJson, 
+                    clearLocalCache, getRegionsByTab, getTopicsByTab, headerTitle, getDynamicRegions, getDynamicTopics, showFilters, filters, issueListWithDates, pass 
                 };
             }
         }).mount('#app');
